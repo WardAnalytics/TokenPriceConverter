@@ -6,13 +6,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from Secweb import SecWeb
 
-from prometheus_fastapi_instrumentator import Instrumentator
-from source.core.logging import configure_logging
+from source.controller import router
 
 api: FastAPI = FastAPI(
     title="Ward Analytics",
     description="Ward Analytics API",
 )
+
+api.include_router(router)
 
 SecWeb(
     app=api,
@@ -39,9 +40,7 @@ SecWeb(
     },
 )
 
-origins = [
-    "*"
-]
+origins = ["*"]
 
 api.add_middleware(
     CORSMiddleware,
@@ -51,26 +50,23 @@ api.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Attach custom error handler to the api so instance so that all errors have their stack traces logged
 @api.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    error(f"Request error for method={request.method} with path={request.url.path}:\n{format_exc()}")
+    error(
+        f"Request error for method={request.method} with path={request.url.path}:\n{format_exc()}"
+    )
     return JSONResponse(content={"detail": exc.detail}, status_code=exc.status_code)
 
-# Init all controllers AFTER defining the app so that the app is available to the controllers and no circular imports occur
-from service.controller import router
 
 api.include_router(router)
-
-Instrumentator().instrument(api).expose(app=api, include_in_schema=False)
 
 
 # Configure logging and return app
 def get_app(*args, **kwargs):
     @api.get("/test", include_in_schema=False)
-    
     async def test_endpoint():
         return {"message": "This is a test endpoint."}
 
-    configure_logging(service="Galactus")
     return api

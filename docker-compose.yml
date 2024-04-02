@@ -8,5 +8,15 @@ services:
     volumes:
       - redis_data:/data
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - redis
+    platform: linux/amd64
+
 volumes:
   redis_data:
