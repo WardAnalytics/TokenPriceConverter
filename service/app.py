@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from Secweb import SecWeb
 
-from source.controller import router
+from service.controller import router
 
 api: FastAPI = FastAPI(
     title="Ward Analytics",

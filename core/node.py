@@ -11,6 +11,11 @@ load_dotenv()
 NODE_URL = os.getenv("NODE_URL")
 
 
+""" Getting token reserves of a pair for a specific block """
+
+async def get_pool_ratio(session: ClientSession, pool_address: str) -> float:
+    """ Returns the ratio between token0 and token1 of the pool's addresses """
+
 """ Getting the token addresses of a pool contract """
 
 async def get_single_pool_token_async(session: ClientSession, pool_address: str, token: int) -> str:
@@ -66,7 +71,7 @@ async def get_pool_tokens_async(session: ClientSession, pool_address: str) -> tu
 
     # Fetch both tokens concurrently
 
-    tasks = [get_single_pool_token_async(pool_address, session, 0), get_single_pool_token_async(pool_address, session, 1)]
+    tasks = [get_single_pool_token_async(session, pool_address, 0), get_single_pool_token_async(session, pool_address, 1)]
     tokens: list[str] = await asyncio.gather(*tasks)
 
     return tuple(tokens)
@@ -103,8 +108,8 @@ async def get_raw_swap_logs(session: ClientSession, from_block: int, to_block: i
         try:
             response = await session.post(NODE_URL, headers=headers, data=payload)
             
-            if response.status_code == 200:
-                data = response.json()
+            if response.status == 200:
+                data = await response.json()
                 logs = data['result']
 
                 return logs
@@ -113,7 +118,8 @@ async def get_raw_swap_logs(session: ClientSession, from_block: int, to_block: i
             await asyncio.sleep(1)
 
         except Exception as e:
-            print(f"Got a weird error, retrying anyways lol: {response.status} {response.text} - {e}")
+            raise e
+            print(f"Got a weird error, retrying anyways lol: {e}")
             await asyncio.sleep(1)
             continue
 
@@ -144,14 +150,14 @@ async def get_token_decimals(session: ClientSession, token_address: str) -> int:
             response = await session.post(NODE_URL, headers={'Content-Type': 'application/json'}, data=payload)
             
             if response.status == 200:
-                decimals = int(response.json()['result'], 16)
+                decimals = int((await response.json())['result'], 16)
                 return decimals
             
             print(f"Failed to get token decimals: [{response.status}] {response.text}")
             await asyncio.sleep(1)
 
         except Exception as e:
-            print(f"Got a weird error, retrying anyways lol: {response.status} {response.text} - {e}")
+            print(f"Got a weird error, retrying anyways lol: {e}")
             await asyncio.sleep(1)
             continue
 
@@ -179,13 +185,13 @@ async def get_token_symbol(session: ClientSession, token_address: str) -> str:
             response = await session.post(NODE_URL, headers={'Content-Type': 'application/json'}, data=payload)
             
             if response.status == 200:
-                symbol = response.json()['result']
+                symbol = (await response.json())['result']
                 return bytes.fromhex(symbol[2:]).decode()
             
             print(f"Failed to get token symbol: [{response.status}] {response.text}")
             await asyncio.sleep(1)
 
         except Exception as e:
-            print(f"Got a weird error, retrying anyways lol: {response.status} {response.text} - {e}")
+            print(f"Got a weird error, retrying anyways lol: {e}")
             await asyncio.sleep(1)
             continue
